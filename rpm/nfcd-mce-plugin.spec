@@ -1,5 +1,5 @@
 Name: nfcd-mce-plugin
-Version: 1.0.0
+Version: 1.0.1
 Release: 0
 Summary: nfcd plugin for mce-based device state tracking
 License: BSD

@@ -1,2 +1,5 @@
 nfcd plugin for mce-based device state tracking.
 Keeps NFC off when display is off.
+
+It is also possible to disable NFC in locked state also:
+Just add `nfc_disable_in_locked 1` macro during build.

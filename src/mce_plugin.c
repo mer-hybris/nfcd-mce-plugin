@@ -35,6 +35,11 @@
 #include <nfc_plugin_impl.h>
 #include <nfc_manager.h>
 #include <mce_display.h>
+
+#ifdef NFC_DISABLE_IN_LOCKED
+#include <mce_tklock.h>
+#endif
+
 #include <mce_log.h>
 #include <gutil_log.h>
 
@@ -51,6 +56,14 @@ enum manager_events {
     MANAGER_EVENT_COUNT
 };
 
+#ifdef NFC_DISABLE_IN_LOCKED
+enum tklock_events {
+	TKLOCK_EVENT_VALID,
+	TKLOCK_EVENT_MODE,
+	TKLOCK_EVENT_COUNT
+};
+#endif
+
 typedef NfcPluginClass McePluginClass;
 typedef struct mce_plugin {
     NfcPlugin parent;
@@ -59,6 +72,11 @@ typedef struct mce_plugin {
     gulong manager_event_id[MANAGER_EVENT_COUNT];
     gulong display_event_id[DISPLAY_EVENT_COUNT];
     gboolean always_on;
+#ifdef NFC_DISABLE_IN_LOCKED
+    gboolean nfc_disable_in_locked;
+    MceTklock* tklock;
+    gulong tklock_event_id[TKLOCK_EVENT_COUNT];
+#endif
 } McePlugin;
 
 G_DEFINE_TYPE(McePlugin, mce_plugin, NFC_TYPE_PLUGIN)
@@ -67,6 +85,12 @@ G_DEFINE_TYPE(McePlugin, mce_plugin, NFC_TYPE_PLUGIN)
 
 #define mce_plugin_display_on(display) \
     ((display) && (display)->valid && (display)->state != MCE_DISPLAY_STATE_OFF)
+
+#ifdef NFC_DISABLE_IN_LOCKED
+//not sure that it is enough
+#define mce_plugin_unlocked_on(tklock) \
+    ((tklock) && (tklock)->valid && (tklock)->mode != MCE_TKLOCK_MODE_LOCKED)
+#endif
 
 /* These need to be synchronized with the settings plugin */
 #define SETTINGS_STORAGE_PATH   "/var/lib/nfcd/settings"
@@ -79,7 +103,11 @@ mce_plugin_update_power(
     McePlugin* self)
 {
     nfc_manager_request_power(self->manager, self->manager->enabled &&
-        (self->always_on || mce_plugin_display_on(self->display)));
+        (self->always_on || mce_plugin_display_on(self->display))
+#ifdef NFC_DISABLE_IN_LOCKED
+        && (self->nfc_disable_in_locked && mce_plugin_unlocked_on(self->tklock))
+#endif
+        );
 }
 
 static
@@ -99,6 +127,18 @@ mce_plugin_display_state_handler(
 {
     mce_plugin_update_power(THIS(plugin));
 }
+
+#ifdef NFC_DISABLE_IN_LOCKED
+static
+void
+mce_plugin_tklock_state_handler(
+    MceTklock *tklock,
+    gpointer plugin)
+{
+	mce_plugin_update_power(THIS(plugin));
+}
+#endif
+
 
 static
 gboolean
@@ -125,6 +165,18 @@ mce_plugin_start(
             mce_display_add_state_changed_handler(self->display,
                 mce_plugin_display_state_handler, self);
     }
+#ifdef NFC_DISABLE_IN_LOCKED
+    /* Reserved for future use with separate settings */
+    self->nfc_disable_in_locked = TRUE;
+	/* Track lock state */
+	self->tklock = mce_tklock_new();
+	self->tklock_event_id[TKLOCK_EVENT_VALID] =
+		mce_tklock_add_valid_changed_handler(self->tklock,
+				mce_plugin_tklock_state_handler, self);
+	self->tklock_event_id[TKLOCK_EVENT_MODE] =
+			mce_tklock_add_mode_changed_handler(self->tklock,
+				mce_plugin_tklock_state_handler, self);
+#endif
     mce_plugin_update_power(self);
     return TRUE;
 }
@@ -142,6 +194,13 @@ mce_plugin_stop(
         mce_display_unref(self->display);
         self->display = NULL;
     }
+#ifdef NFC_DISABLE_IN_LOCKED
+    if (self->tklock) {
+        mce_tklock_remove_all_handlers(self->tklock, self->tklock_event_id);
+	    mce_tklock_unref(self->tklock);
+        self->tklock = NULL;
+    }
+#endif
     nfc_manager_remove_all_handlers(self->manager, self->manager_event_id);
     nfc_manager_unref(self->manager);
     self->manager = NULL;

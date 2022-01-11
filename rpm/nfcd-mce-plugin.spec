@@ -20,7 +20,10 @@ Requires: nfcd
 %setup -q
 
 %build
-make %{_smp_mflags} KEEP_SYMBOLS=1 release
+make %{_smp_mflags} \
+    %{?nfc_disable_in_locked: NFC_DISABLE_IN_LOCKED=1} \
+    KEEP_SYMBOLS=1 \
+    release
 
 %install
 rm -rf %{buildroot}

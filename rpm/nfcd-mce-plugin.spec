@@ -1,4 +1,5 @@
 Name: nfcd-mce-plugin
+
 Version: 1.0.1
 Release: 0
 Summary: nfcd plugin for mce-based device state tracking
@@ -6,16 +7,18 @@ License: BSD
 URL: https://github.com/mer-hybris/nfcd-mce-plugin
 Source: %{name}-%{version}.tar.bz2
 
+%define nfcd_version 1.1.10
+
 BuildRequires: pkgconfig
 BuildRequires: pkgconfig(libglibutil)
 BuildRequires: pkgconfig(libmce-glib)
-BuildRequires: pkgconfig(nfcd-plugin)
+BuildRequires: pkgconfig(nfcd-plugin) >= %{nfcd_version}
 
 # license macro requires rpm >= 4.11
 BuildRequires: pkgconfig(rpm)
 %define license_support %(pkg-config --exists 'rpm >= 4.11'; echo $?)
 
-Requires: nfcd
+Requires: nfcd >= %{nfcd_version}
 
 %define plugin_dir %{_libdir}/nfcd/plugins
 

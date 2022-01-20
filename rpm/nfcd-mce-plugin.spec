@@ -7,17 +7,19 @@ License: BSD
 URL: https://github.com/mer-hybris/nfcd-mce-plugin
 Source: %{name}-%{version}.tar.bz2
 
-%define nfcd_version 1.1.10
+%define nfcd_version 1.1.11
+%define libmce_version 1.0.5
 
 BuildRequires: pkgconfig
 BuildRequires: pkgconfig(libglibutil)
-BuildRequires: pkgconfig(libmce-glib)
+BuildRequires: pkgconfig(libmce-glib) >= %{libmce_version}
 BuildRequires: pkgconfig(nfcd-plugin) >= %{nfcd_version}
 
 # license macro requires rpm >= 4.11
 BuildRequires: pkgconfig(rpm)
 %define license_support %(pkg-config --exists 'rpm >= 4.11'; echo $?)
 
+Requires: libmce-glib >= %{libmce_version}
 Requires: nfcd >= %{nfcd_version}
 
 %define plugin_dir %{_libdir}/nfcd/plugins
